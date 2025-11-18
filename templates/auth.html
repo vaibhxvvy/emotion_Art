@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Login / Signup — Emotion Art</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-slate-900/60 backdrop-blur rounded-2xl border border-slate-700 p-6 shadow-lg">
+    <div class="text-center mb-4">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-indigo-500 text-white font-bold text-xl mb-3">EA</div>
+      <h1 class="text-2xl font-semibold">Welcome</h1>
+      <p class="text-sm text-slate-300">Login or create an account to save artworks</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 mb-4">
+      <button id="tabLogin" class="py-2 rounded-lg bg-indigo-600">Login</button>
+      <button id="tabSignup" class="py-2 rounded-lg bg-slate-800/40 border border-slate-700">Signup</button>
+    </div>
+
+    <div id="alert" class="hidden mb-3 text-sm rounded-md p-2"></div>
+
+    <div id="form" class="space-y-3">
+      <input id="email" type="email" placeholder="Email" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 placeholder:text-slate-400" />
+      <input id="password" type="password" placeholder="Password" class="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 placeholder:text-slate-400" />
+      <div class="flex items-center justify-between text-sm text-slate-300">
+        <label class="inline-flex items-center gap-2"><input id="remember" type="checkbox" /> Remember</label>
+        <a href="/chat.html" id="guest" class="text-indigo-300">Try demo</a>
+      </div>
+      <button id="submitBtn" class="w-full py-3 rounded-xl bg-indigo-600 font-semibold">Login</button>
+      <div class="text-xs text-slate-400 text-center mt-2">By continuing you accept our <a class="text-indigo-300">Terms</a></div>
+    </div>
+
+    <div class="mt-4 text-center text-slate-400 text-sm">
+      <span>Need help?</span>
+      <a id="switchBtn" class="ml-2 text-indigo-300 underline cursor-pointer">Switch</a>
+    </div>
+  </div>
+
+<script>
+  let mode = 'login'; // or 'signup'
+  const tabLogin = document.getElementById('tabLogin');
+  const tabSignup = document.getElementById('tabSignup');
+  const submitBtn = document.getElementById('submitBtn');
+  const alertEl = document.getElementById('alert');
+  const guest = document.getElementById('guest');
+  const switchBtn = document.getElementById('switchBtn');
+
+  function showAlert(msg, type='error') {
+    alertEl.style.display = 'block';
+    alertEl.textContent = msg;
+    alertEl.className = type === 'error'
+      ? 'mb-3 text-sm rounded-md p-2 bg-red-600/20 text-red-200 border border-red-700'
+      : 'mb-3 text-sm rounded-md p-2 bg-green-600/10 text-green-200 border border-green-700';
+    setTimeout(()=> alertEl.style.display='none', 3500);
+  }
+
+  function setMode(m) {
+    mode = m;
+    if (mode === 'login') {
+      submitBtn.textContent = 'Login';
+      tabLogin.className = 'py-2 rounded-lg bg-indigo-600';
+      tabSignup.className = 'py-2 rounded-lg bg-slate-800/40 border border-slate-700';
+    } else {
+      submitBtn.textContent = 'Create account';
+      tabSignup.className = 'py-2 rounded-lg bg-indigo-600';
+      tabLogin.className = 'py-2 rounded-lg bg-slate-800/40 border border-slate-700';
+    }
+  }
+  setMode('login');
+
+  tabLogin.addEventListener('click', ()=> setMode('login'));
+  tabSignup.addEventListener('click', ()=> setMode('signup'));
+  switchBtn.addEventListener('click', ()=> setMode(mode==='login' ? 'signup' : 'login'));
+
+  submitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    if (!email || !password) { showAlert('Email and password required'); return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = mode === 'login' ? 'Logging in...' : 'Creating...';
+
+    try {
+      const res = await fetch('/' + (mode === 'login' ? 'login' : 'signup'), {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password })
+      });
+
+      // safe parsing
+      const ct = res.headers.get('content-type') || '';
+      let data;
+      if (ct.includes('application/json')) data = await res.json();
+      else data = { message: await res.text() };
+
+      if (!res.ok) {
+        showAlert(data.error || data.message || 'Request failed');
+        submitBtn.disabled = false;
+        submitBtn.textContent = mode === 'login' ? 'Login' : 'Create account';
+        return;
+      }
+
+      if (mode === 'signup') {
+        showAlert('Account created — now login', 'success');
+        setMode('login');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Login';
+        return;
+      }
+
+      // login success
+      localStorage.setItem('token', data.token);
+      showAlert('Login successful', 'success');
+      setTimeout(()=> window.location.href = '/chat.html', 700);
+    } catch (err) {
+      console.error(err);
+      showAlert('Network error — try again');
+      submitBtn.disabled = false;
+      submitBtn.textContent = mode === 'login' ? 'Login' : 'Create account';
+    }
+  });
+
+  guest.addEventListener('click', (e)=> { e.preventDefault(); window.location.href = '/chat.html'; });
+</script>
+</body>
+</html>
